@@ -39,7 +39,7 @@ const verifyWebhookSecret = (req, res, next) => {
 
 
 
-const allowedOrigins = ['https://pooltablesquad.com', 'http://localhost:3000', 'https://server.pooltagblesquad.com', 'https://www.jotform.com'];
+const allowedOrigins = ['https://pooltablesquad.com', 'http://localhost:3000', 'https://server.pooltablesquad.com', 'https://www.jotform.com'];
 
 app.use(cors({
   origin: function(origin, callback) {
