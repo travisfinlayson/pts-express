@@ -45,6 +45,7 @@ router.post('/register', async (req, res) => {
 // Login existing user
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
+  console.log('🔑 auth.js /login route called');
 
   try {
     const user = await pool.query('SELECT * FROM users WHERE email = $1', [email]);

@@ -54,12 +54,12 @@ const requestHandler = async (req, res) => {
                 delivery_flights, where_repairs_address_addr_line_1, where_repairs_address_addr_line_2, 
                 where_repairs_address_city, where_repairs_address_state, where_repairs_address_postal, preferred_date, 
                 preferred_date_2, preferred_date_3, anything_else, flights_to_storage, flights_moving, 
-                distance_after_assembly, google_ads, bing_ads, facebook_ads, ad_blocker, email, name_first, name_last, phone_number
+                distance_after_disassembly, google_ads, bing_ads, facebook_ads, ad_blocker, email, name_first, name_last, phone_number, additional_moving_prep
             ) VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, 
                 $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, 
                 $40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $50, $51, $52, $53, $54, $55, $56, $57, $58, 
-                $59, $60, $61, $62, $63, $64, $65, $66
+                $59, $60, $61, $62, $63, $64, $65, $66, $67
             ) RETURNING id;
         `;
 
@@ -121,15 +121,16 @@ const requestHandler = async (req, res) => {
             payload.q35_anythingElse || null,
             payload.q91_flightsToStorage || null,
             payload.q104_flightsMoving || null,
-            payload.q90_distanceAfterAssembly || null,
+            payload.q90_distanceAfterDisassembly || null,
             googleAds,
             bingAds,
             facebookAds,
-            payload.q54_adBlocker === "true" || payload.q54_adBlocker === true,
+            payload.q51_adBlocker === "true" || payload.q51_adBlocker === true,
             email,
             nameFirst,
             nameLast,
-            phoneNumber
+            phoneNumber,
+            payload.q124_otherTable || null,
         ];
 
         const requestResult = await pool.query(insertRequestQuery, requestValues);
@@ -175,6 +176,16 @@ const requestHandler = async (req, res) => {
             `;
             for (const service of payload.q108_servicesLooking) {
                 await pool.query(insertService, [requestId, service]);
+            }
+        }
+
+        if (Array.isArray(payload.q123_doesYour)) {
+            const insertPrepOption = `
+                INSERT INTO moving_prep (request_id, prep_option)
+                VALUES ($1, $2);
+            `;
+            for (const option of payload.q123_doesYour) {
+                await pool.query(insertPrepOption, [requestId, option]);
             }
         }
 

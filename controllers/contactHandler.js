@@ -36,14 +36,15 @@ const contactHandler = async (req, res) => {
         const customerResult = await pool.query(customerQuery, customerValues);
         const customerId = customerResult.rows[0].id;
 
-        // Insert into contact table
+        // Insert into contact table (UPDATED)
         const contactQuery = `
-            INSERT INTO contact (customer_id, comments, google_ads, bing_ads, facebook_ads)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO contact (customer_id, name_first, name_last, comments, google_ads, bing_ads, facebook_ads, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
             RETURNING id;
         `;
 
-        const contactValues = [customerId, comments, googleAds, bingAds, facebookAds];
+        // (UPDATED) Add nameFirst and nameLast to the values array
+        const contactValues = [customerId, nameFirst, nameLast, comments, googleAds, bingAds, facebookAds];
         const contactResult = await pool.query(contactQuery, contactValues);
         const contactId = contactResult.rows[0].id;
 
