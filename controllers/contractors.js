@@ -331,6 +331,86 @@ const updateContractorPrices = async (req, res) => {
   }
 };
 
+/**
+ * @description Get all main services (id and service_name).
+ */
+const getMainServices = async (req, res) => {
+    try {
+        const result = await pool.query('SELECT id, service_name FROM main_services');
+        console.log('Main services:', result.rows);
+        res.status(200).json(result.rows);
+    } catch (err) {
+        console.error('Error in getMainServices:', err.stack);
+        res.status(500).json({ message: 'Server error while fetching main services.' });
+    }
+};
+
+/**
+ * @description Get all service surcharges for a specific contractor.
+ * Returns service_id and surcharge_percent for each row where contractor_id matches.
+ */
+const getContractorSurcharges = async (req, res) => {
+  const { id } = req.params; // The contractor_id
+
+  try {
+    const result = await pool.query(
+      'SELECT service_id, surcharge_percent FROM service_surcharges WHERE contractor_id = $1',
+      [id]
+    );
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error('Error in getContractorSurcharges:', err.stack);
+    res.status(500).json({ message: 'Server error while fetching service surcharges.' });
+  }
+};
+
+/**
+ * @description Update or create a service surcharge for a contractor.
+ * Checks if a row exists, then updates or inserts accordingly.
+ */
+const setContractorSurcharge = async (req, res) => {
+  const { contractor_id, service_id, surcharge_percent } = req.body;
+
+  if (!contractor_id || !service_id || surcharge_percent === undefined) {
+    return res.status(400).json({ 
+      error: 'contractor_id, service_id, and surcharge_percent are required' 
+    });
+  }
+
+  try {
+    // First, check if the row exists
+    const existingRow = await pool.query(
+      'SELECT * FROM service_surcharges WHERE contractor_id = $1 AND service_id = $2',
+      [contractor_id, service_id]
+    );
+
+    let result;
+    if (existingRow.rows.length > 0) {
+      // Update existing row
+      result = await pool.query(
+        `UPDATE service_surcharges 
+         SET surcharge_percent = $3 
+         WHERE contractor_id = $1 AND service_id = $2 
+         RETURNING *`,
+        [contractor_id, service_id, surcharge_percent]
+      );
+    } else {
+      // Insert new row
+      result = await pool.query(
+        `INSERT INTO service_surcharges (contractor_id, service_id, surcharge_percent)
+         VALUES ($1, $2, $3)
+         RETURNING *`,
+        [contractor_id, service_id, surcharge_percent]
+      );
+    }
+    
+    res.status(200).json(result.rows[0]);
+  } catch (err) {
+    console.error('Error in setContractorSurcharge:', err.stack);
+    res.status(500).json({ message: 'Failed to set contractor surcharge.' });
+  }
+};
+
 module.exports = {
     getContractors,
     getContractor,
@@ -341,5 +421,8 @@ module.exports = {
     addNote,
     deleteNote,
     getContractorPrices,
-    updateContractorPrices
+    updateContractorPrices,
+    getMainServices,
+    getContractorSurcharges,
+    setContractorSurcharge
 };

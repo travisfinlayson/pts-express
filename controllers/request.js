@@ -13,13 +13,15 @@ const getFullRequestById = async (id) => {
         pocketImagesResult,
         repairsResult,
         servicesResult,
-        tablePhotosResult
+        tablePhotosResult,
+        additionalChargesResult
     ] = await Promise.all([
         pool.query('SELECT accessory FROM accessories_moving WHERE request_id = $1', [id]),
         pool.query('SELECT image_url FROM pocket_images WHERE request_id = $1', [id]),
         pool.query('SELECT repair FROM repairs_requested WHERE request_id = $1', [id]),
         pool.query('SELECT service FROM services_requested WHERE request_id = $1', [id]),
-        pool.query('SELECT photo_url FROM table_photos WHERE request_id = $1', [id])
+        pool.query('SELECT photo_url FROM table_photos WHERE request_id = $1', [id]),
+        pool.query('SELECT id, detail, price FROM additional_charges WHERE request_id = $1', [id])
     ]);
 
     return {
@@ -29,6 +31,7 @@ const getFullRequestById = async (id) => {
         repairs_requested: repairsResult.rows.map(r => r.repair),
         services_requested: servicesResult.rows.map(r => r.service),
         table_photos: tablePhotosResult.rows.map(r => r.photo_url),
+        additional_charges: additionalChargesResult.rows,
     };
 };
 
@@ -134,7 +137,8 @@ const updatePoolRequest = async (req, res) => {
     const relationalFieldMap = {
         repairs_requested: { table: 'repairs_requested', column: 'repair' },
         services_requested: { table: 'services_requested', column: 'service' },
-        accessories: { table: 'accessories_moving', column: 'accessory' }
+        accessories: { table: 'accessories_moving', column: 'accessory' },
+        additional_charges: { table: 'additional_charges', column: ['detail', 'price'], isComplex: true }
     };
 
     const regularFields = {};
@@ -168,8 +172,15 @@ const updatePoolRequest = async (req, res) => {
 
             if (Array.isArray(newValues) && newValues.length > 0) {
                 for (const value of newValues) {
-                    const insertQuery = `INSERT INTO ${config.table} (request_id, ${config.column}) VALUES ($1, $2)`;
-                    await client.query(insertQuery, [id, value]);
+                    if (config.isComplex) {
+                        // Handle additional_charges with multiple columns
+                        const insertQuery = `INSERT INTO ${config.table} (request_id, detail, price) VALUES ($1, $2, $3)`;
+                        await client.query(insertQuery, [id, value.detail || value.name, value.price || value.amount]);
+                    } else {
+                        // Handle simple single-column tables
+                        const insertQuery = `INSERT INTO ${config.table} (request_id, ${config.column}) VALUES ($1, $2)`;
+                        await client.query(insertQuery, [id, value]);
+                    }
                 }
             }
         }
